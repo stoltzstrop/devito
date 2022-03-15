@@ -1,7 +1,11 @@
-from xdsl.dialects.builtin import *
+#from xdsl.dialects.builtin import *
+from ast import operator
 from xdsl.printer import Printer
 from devito.ir.ietxdsl import *
+from devito.tools import as_tuple
 from xdsl.dialects.builtin import ModuleOp
+
+from devito import Grid, TimeFunction, Eq, Operator
 
 
 def test_expression():
@@ -89,5 +93,57 @@ def test_example():
             ]))
     ])
 
+    printer = Printer()
+    printer.print_op(mod)
+    import pdb;pdb.set_trace()
+
+
+
+def test_devito_iet():
+    grid = Grid(shape=(3, 3))
+    u = TimeFunction(name='u', grid=grid)
+    eq = Eq(u.forward, u + 1)
+    op = Operator([eq])
+    import pdb;pdb.set_trace()
+
+    t_limits = as_tuple([str(i) for i in op.body.body[1].body[0].limits])
+    t_props = [str(i) for i in op.body.body[1].body[0].properties]
+    
+    x_limits = as_tuple([str(i) for i in op.body.body[1].body[0].nodes[0].body[0].body[0].limits])
+    x_props = [str(i) for i in op.body.body[1].body[0].nodes[0].body[0].body[0].properties]
+    
+    y_limits = as_tuple([str(i) for i in op.body.body[1].body[0].nodes[0].body[0].body[0].nodes[0].limits])
+    y_props = [str(i) for i in op.body.body[1].body[0].nodes[0].body[0].body[0].nodes[0].properties]
+  
+    ctx = MLContext()
+    Builtin(ctx)
+    iet = IET(ctx)
+
+    mod = ModuleOp.from_region_or_ops([
+        Callable.get("kernel", ["u"], Block.from_callable([iet.i32], lambda u: [
+            Iteration.get(t_props, t_limits,
+                          Block.from_callable([iet.i32, iet.i32, iet.i32], lambda time, t0, t1: [
+                Iteration.get(x_props, x_limits,
+                              Block.from_callable([iet.i32], lambda x: [
+                    Iteration.get(y_props, y_limits,
+                                  Block.from_callable([iet.i32], lambda y: [
+                        cst1    := Constant.get(1),
+                        x1      := Addi.get(x, cst1),
+                        y1      := Addi.get(y, cst1),
+                        ut0     := Idx.get(u, t0),
+                        ut0x1   := Idx.get(ut0, x1),
+                        ut0x1y1 := Idx.get(ut0x1, y1),
+                        rhs     := Addi.get(ut0x1y1, cst1),
+                        ut1     := Idx.get(u, t1),
+                        ut1x1   := Idx.get(ut1, x1),
+                        lhs     := Idx.get(ut1x1, y1),
+                        Assign.build([lhs, rhs])
+                    ]))
+                ]))
+            ]))
+        ]))
+    ])
+
+    import pdb;pdb.set_trace()
     printer = Printer()
     printer.print_op(mod)
