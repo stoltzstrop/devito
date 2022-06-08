@@ -3,6 +3,8 @@ from xdsl.irdl import *
 from xdsl.util import *
 from xdsl.dialects.builtin import *
 
+from devito.types.dimension import DerivedDimension
+
 
 @dataclass
 class IET:
@@ -12,10 +14,12 @@ class IET:
         # TODO add all operations
         self.ctx.register_op(Constant)
         self.ctx.register_op(Addi)
+        self.ctx.register_op(Modi)
         self.ctx.register_op(Iteration)
         self.ctx.register_op(Callable)
         self.ctx.register_op(Idx)
         self.ctx.register_op(Assign)
+        self.ctx.register_op(Initialise)
         self.i32 = IntegerType.from_width(32)
 
 
@@ -57,6 +61,23 @@ class Addi(Operation):
                          result_types=[IntegerType.build(32)])
         return res
 
+@irdl_op_definition
+class Modi(Operation):
+    name: str = "iet.modi"
+    input1 = OperandDef(IntegerType)
+    input2 = OperandDef(IntegerType)
+    output = ResultDef(IntegerType)
+
+    # TODO replace with trait
+    def verify_(self) -> None:
+        if self.input1.typ != self.input2.typ or self.input2.typ != self.output.typ:
+            raise Exception("expect all input and output types to be equal")
+
+    @staticmethod
+    def get(lhs, rhs):
+        res = Modi.build(operands=[lhs, rhs],
+                         result_types=[IntegerType.build(32)])
+        return res
 
 @irdl_op_definition
 class Idx(Operation):
@@ -77,6 +98,19 @@ class Assign(Operation):
     lhs = OperandDef(IntegerType)
     rhs = OperandDef(IntegerType)
 
+@irdl_op_definition
+class Initialise(Operation):
+    name: str = "iet.initialise"
+    id = AttributeDef(StringAttr)
+    rhs = OperandDef(IntegerType)
+    lhs = ResultDef(IntegerType)
+
+
+    @staticmethod
+    def get(lhs, rhs, id):
+        res = Initialise.build(attributes= {"id" : StringAttr.from_str(id)},operands=[lhs],
+                         result_types=[IntegerType.build(32)])
+        return res
 
 @irdl_op_definition
 class Callable(Operation):
@@ -98,13 +132,14 @@ class Callable(Operation):
 @irdl_op_definition
 class Iteration(Operation):
     name: str = "iet.iteration"
+    arg_name = AttributeDef(StringAttr)
     body = RegionDef()
     limits = AttributeDef(ArrayAttr)
     properties = AttributeDef(ArrayAttr)
     pragmas = AttributeDef(ArrayAttr)
 
     @staticmethod
-    def get(properties: List[str], limits: Tuple[str, str, str], body: Block,
+    def get(properties: List[str], limits: Tuple[str, str, str], arg: str, body: Block,
             pragmas: List[str] = []):
         return Iteration.build(attributes={
             "limits":
@@ -116,5 +151,6 @@ class Iteration(Operation):
             "properties":
             ArrayAttr.from_list([StringAttr.from_str(p) for p in properties]),
             "pragmas":
-            ArrayAttr.from_list([StringAttr.from_str(p) for p in pragmas])
+            ArrayAttr.from_list([StringAttr.from_str(p) for p in pragmas]),
+            "arg_name": arg
         }, regions=[Region.from_block_list([body])])

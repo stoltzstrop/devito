@@ -1,6 +1,7 @@
 import io
 from devito.ir.ietxdsl.operations import *
 
+SSAValueNames: Dict[SSAValue, str] = {}
 
 class CGeneration:
 
@@ -51,6 +52,14 @@ class CGeneration:
         self.printOperation(module.ops[-1])
 
     def printCallable(self, callable_op: Callable):
+        # TODO: add dict for callable params
+        arglist = callable_op.body.blocks[0].args
+        i = 0
+        for arg in arglist:
+            name = callable_op.parameters.data[0].data
+            SSAValueNames[arg] = name
+            #SSAValueNames[arg] = callable_op.parameters[i] ## this is what it should be
+            i = i + 1
         self.print("int Kernel() {")
         self.print("{")
         self.indent()
@@ -61,15 +70,16 @@ class CGeneration:
         pass
 
     def printIteration(self, iteration_op: Iteration):
-
-        iterator = "x_" + str(len(self.iterator_names))
+        # TODO: add dict for Iteration params
+        ssa_val = iteration_op.body.blocks[0].args[0]
+        iterator = "i_" + str(len(self.iterator_names))
+        SSAValueNames[ssa_val] = iterator
         self.iterator_names[
             iteration_op.regions[0].blocks[0].args[0]] = iterator
 
         lower_bound = iteration_op.limits.data[0].data
         upper_bound = iteration_op.limits.data[1].data
         increment = iteration_op.limits.data[2].data
-
         self.print(f"for (int {iterator} = {lower_bound}; ", end='')
         self.print(f"{iterator} <= {upper_bound}; ", end='', indent=False)
         self.print(f"{iterator} += {increment}) ", indent=False)
@@ -81,10 +91,13 @@ class CGeneration:
         pass
 
     def printResult(self, result):
+        #TODO get from dict
         if isinstance(result, BlockArgument):
-            self.print("a", indent=False, end="")
+            name = SSAValueNames[result]
+            self.print(name, indent=False, end="")
             return
         if isinstance(result, SSAValue):
+           # name = SSAValueNames[result.op]
             self.printOperation(result.op)
 
     def printOperation(self, operation):
@@ -94,7 +107,7 @@ class CGeneration:
         if (isinstance(operation, List)):
             for op in operation:
                 if isinstance(op, Constant) or isinstance(
-                        op, Addi) or isinstance(op, Idx):
+                        op, Addi) or isinstance(op, Idx) or isinstance(op, Modi):
                     continue
                 self.printOperation(op)
             return
@@ -111,6 +124,16 @@ class CGeneration:
             self.printResult(operation.input2)
             return
 
+        if (isinstance(operation, Modi)):
+            self.print("(", end="")
+            self.printResult(operation.input1)
+            self.print(")", end="")
+            self.print(" % ", end='', indent=False)
+            self.print("(", end="")
+            self.printResult(operation.input2)
+            self.print(")", end="")
+            return
+
         if (isinstance(operation, Callable)):
             self.printCallable(operation)
             return
@@ -122,6 +145,20 @@ class CGeneration:
         if (isinstance(operation, Assign)):
             self.print("", end="")
             self.printResult(operation.lhs)
+            self.print(" = ", indent=False, end="")
+            self.printResult(operation.rhs)
+            self.print("", indent=False)
+            return
+
+        if (isinstance(operation, Initialise)):
+            type = operation.results[0].typ.width.name
+            self.print(type, indent=False, end=" ")
+
+            assignee = operation.id.data
+            self.print(assignee, indent=False, end="")
+            ssa_val = operation.lhs
+            SSAValueNames[ssa_val] = assignee
+
             self.print(" = ", indent=False, end="")
             self.printResult(operation.rhs)
             self.print("", indent=False)
