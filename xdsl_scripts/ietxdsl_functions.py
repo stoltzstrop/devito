@@ -119,7 +119,7 @@ def myVisit(node, block=None, ctx={}):
         index = node.index
         b = Block.from_arg_types([iet.i32])
         ctx = {**ctx, index: b.args[0]}
-#        assert(uindices are not empty and are modulo)
+#       TODO: assert(uindices are not empty and are modulo)
         for uindex in list(node.uindices):
             r = []
             add_to_block(uindex.symbolic_min,{Symbol(s): a for s, a in ctx.items()}, r)

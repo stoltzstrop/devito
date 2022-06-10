@@ -52,25 +52,27 @@ class CGeneration:
         self.printOperation(module.ops[-1])
 
     def printCallable(self, callable_op: Callable):
-        # TODO: add dict for callable params
         arglist = callable_op.body.blocks[0].args
         i = 0
+        # TODO: somehow know to leave out "t0" and "t1"
+        self.print("int Kernel(", end='', indent=False)
+        num_params = len(list(arglist))
         for arg in arglist:
             name = callable_op.parameters.data[0].data
-            SSAValueNames[arg] = name
-            #SSAValueNames[arg] = callable_op.parameters[i] ## this is what it should be
+            SSAValueNames[arg] = callable_op.parameters.data[i].data
+            self.print(callable_op.parameters.data[i].data, end='', indent=False)
+            if i < (num_params-1):
+                self.print(",", end='', indent=False)
             i = i + 1
-        self.print("int Kernel() {")
-        self.print("{")
+        self.print("){")
         self.indent()
         self.printOperation(callable_op.body.op)
-        self.print("return 0")
+        self.print("return 0;")
         self.dedent()
         self.print("}")
         pass
 
     def printIteration(self, iteration_op: Iteration):
-        # TODO: add dict for Iteration params
         ssa_val = iteration_op.body.blocks[0].args[0]
         iterator = "i_" + str(len(self.iterator_names))
         SSAValueNames[ssa_val] = iterator
@@ -91,7 +93,6 @@ class CGeneration:
         pass
 
     def printResult(self, result):
-        #TODO get from dict
         if isinstance(result, BlockArgument):
             name = SSAValueNames[result]
             self.print(name, indent=False, end="")
@@ -102,7 +103,7 @@ class CGeneration:
 
     def printOperation(self, operation):
         if isinstance(operation, BlockArgument):
-            self.print("u", indent=False, end="")
+            self.print("uuu", indent=False, end="")
             return
         if (isinstance(operation, List)):
             for op in operation:
@@ -152,7 +153,7 @@ class CGeneration:
 
         if (isinstance(operation, Initialise)):
             type = operation.results[0].typ.width.name
-            self.print(type, indent=False, end=" ")
+            self.print(type, indent=True, end=" ")
 
             assignee = operation.id.data
             self.print(assignee, indent=False, end="")

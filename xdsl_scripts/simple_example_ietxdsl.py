@@ -30,7 +30,10 @@ op = Operator([eq])
 # this must be listed later or it causes issues with the op declaration
 from sympy import Indexed, IndexedBase, symbols, Integer, Symbol, Add, Mul, Eq
 
-ints = ['t0', 't1', 'x', 'u']
+#op_params = list(op.parameters) # should get list of parameters this way
+# TODO: but for now we still need to add "t0" and "t1" even though they aren't passed in
+ints  = ['u', 'time_M', 'time_m', 'x_M', 'x_m', 'y_M', 'y_m', 'timers','t0','t1']
+
 b = Block.from_arg_types([iet.i32] * len(ints))
 d = {name: register for name, register in zip(ints, b.args)}
     
@@ -44,7 +47,8 @@ kernel_comments = op.body.body[0]
 result =  ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
 #result =  ietxdsl_functions.myVisit(node, block=b, ctx=d)
 
-call_obj = Callable.get("kernel", op.parameters[0].name,b)
+Printer()._print_named_block(b)
+call_obj = Callable.get("kernel", ints,b)
 Printer().print_op(ModuleOp.from_region_or_ops([call_obj]))
 cgen = CGeneration()
 cgen.printCallable(call_obj)
