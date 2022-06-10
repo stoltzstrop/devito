@@ -30,7 +30,13 @@ op = Operator([eq])
 # this must be listed later or it causes issues with the op declaration
 from sympy import Indexed, IndexedBase, symbols, Integer, Symbol, Add, Mul, Eq
 
-#op_params = list(op.parameters) # should get list of parameters this way
+# TODO get parameters and their types this way --
+# TODO add corresponding attribute in operations.Callable for types
+# TODO then maybe in cgen those parameters without associate types aren't printed in the Kernel header
+op_params = list(op.parameters) # should get list of parameters this way
+tmp = op_params[0]._C_typedata
+tmp2 = op_params[1]._C_typedata
+tmp3 = op_params[7]._C_typedata
 # TODO: but for now we still need to add "t0" and "t1" even though they aren't passed in
 ints  = ['u', 'time_M', 'time_m', 'x_M', 'x_m', 'y_M', 'y_m', 'timers','t0','t1']
 

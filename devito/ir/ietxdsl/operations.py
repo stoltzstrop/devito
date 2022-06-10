@@ -117,6 +117,7 @@ class Callable(Operation):
     name: str = "iet.callable"
     callable_name = AttributeDef(StringAttr)
     parameters = AttributeDef(ArrayAttr)
+    #TODO add corresponding attribute for types!
     body = RegionDef()
 
     @staticmethod
