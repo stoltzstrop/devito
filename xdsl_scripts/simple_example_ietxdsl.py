@@ -30,15 +30,21 @@ op = Operator([eq])
 # this must be listed later or it causes issues with the op declaration
 from sympy import Indexed, IndexedBase, symbols, Integer, Symbol, Add, Mul, Eq
 
-# TODO get parameters and their types this way --
-# TODO add corresponding attribute in operations.Callable for types
-# TODO then maybe in cgen those parameters without associate types aren't printed in the Kernel header
-op_params = list(op.parameters) # should get list of parameters this way
-tmp = op_params[0]._C_typedata
-tmp2 = op_params[1]._C_typedata
-tmp3 = op_params[7]._C_typedata
-# TODO: but for now we still need to add "t0" and "t1" even though they aren't passed in
-ints  = ['u', 'time_M', 'time_m', 'x_M', 'x_m', 'y_M', 'y_m', 'timers','t0','t1']
+# later in cgeneration those parameters without associate types aren't printed in the Kernel header
+op_params = list(op.parameters)
+op_types = []
+for opi in op_params:
+    op_types.append(opi._C_typedata)
+
+# TODO: for now we still need to add "t0" and "t1" even though they aren't passed in
+op_params.append("t0")
+op_params.append("t1")
+# TODO: u also does not get the right type and must be passed in this way for now
+op_params[0] = "u"
+
+ints = []
+for opi in op_params:
+    ints.append(str(opi))
 
 b = Block.from_arg_types([iet.i32] * len(ints))
 d = {name: register for name, register in zip(ints, b.args)}
@@ -54,7 +60,7 @@ result =  ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
 #result =  ietxdsl_functions.myVisit(node, block=b, ctx=d)
 
 Printer()._print_named_block(b)
-call_obj = Callable.get("kernel", ints,b)
+call_obj = Callable.get("kernel", ints, op_types, b)
 Printer().print_op(ModuleOp.from_region_or_ops([call_obj]))
 cgen = CGeneration()
 cgen.printCallable(call_obj)

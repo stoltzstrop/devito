@@ -60,6 +60,11 @@ class CGeneration:
         for arg in arglist:
             name = callable_op.parameters.data[0].data
             SSAValueNames[arg] = callable_op.parameters.data[i].data
+            i = i + 1
+        i = 0
+        # need separate loop because not all parameters have types! (TODO: fix this workaround)
+        for op_type in callable_op.types.data:
+            self.print(op_type.data, end=' ', indent=False)
             self.print(callable_op.parameters.data[i].data, end='', indent=False)
             if i < (num_params-1):
                 self.print(",", end='', indent=False)

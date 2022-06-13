@@ -117,16 +117,18 @@ class Callable(Operation):
     name: str = "iet.callable"
     callable_name = AttributeDef(StringAttr)
     parameters = AttributeDef(ArrayAttr)
-    #TODO add corresponding attribute for types!
+    types = AttributeDef(ArrayAttr)
     body = RegionDef()
 
     @staticmethod
-    def get(name: str, params: List[str], body: Block):
+    def get(name: str, params: List[str], types: List[str], body: Block):
         return Callable.build(attributes={
             "callable_name":
             StringAttr.from_str(name),
             "parameters":
-            ArrayAttr.from_list([StringAttr.from_str(p) for p in params])
+            ArrayAttr.from_list([StringAttr.from_str(p) for p in params]),
+            "types":
+            ArrayAttr.from_list([StringAttr.from_str(p) for p in types])
         }, regions=[Region.from_block_list([body])])
 
 
