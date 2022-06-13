@@ -99,6 +99,16 @@ class Assign(Operation):
     rhs = OperandDef(IntegerType)
 
 @irdl_op_definition
+class PointerCast(Operation):
+    name: str = "iet.pointercast"
+    statement = AttributeDef(StringAttr)
+
+    @staticmethod
+    def get(statement):
+        return PointerCast.build(operands=[],attributes= {"statement" : StringAttr.from_str(statement)},
+                               result_types=[])
+
+@irdl_op_definition
 class Initialise(Operation):
     name: str = "iet.initialise"
     id = AttributeDef(StringAttr)
@@ -117,16 +127,19 @@ class Callable(Operation):
     name: str = "iet.callable"
     callable_name = AttributeDef(StringAttr)
     parameters = AttributeDef(ArrayAttr)
+    header_parameters = AttributeDef(ArrayAttr)
     types = AttributeDef(ArrayAttr)
     body = RegionDef()
 
     @staticmethod
-    def get(name: str, params: List[str], types: List[str], body: Block):
+    def get(name: str, params: List[str], header_params: List[str], types: List[str], body: Block):
         return Callable.build(attributes={
             "callable_name":
             StringAttr.from_str(name),
             "parameters":
             ArrayAttr.from_list([StringAttr.from_str(p) for p in params]),
+            "header_parameters":
+                ArrayAttr.from_list([StringAttr.from_str(p) for p in header_params]),
             "types":
             ArrayAttr.from_list([StringAttr.from_str(p) for p in types])
         }, regions=[Region.from_block_list([body])])

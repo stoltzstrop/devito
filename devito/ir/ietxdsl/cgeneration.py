@@ -56,22 +56,23 @@ class CGeneration:
         i = 0
         # TODO: somehow know to leave out "t0" and "t1"
         self.print("int Kernel(", end='', indent=False)
-        num_params = len(list(arglist))
         for arg in arglist:
             name = callable_op.parameters.data[0].data
             SSAValueNames[arg] = callable_op.parameters.data[i].data
             i = i + 1
         i = 0
+        num_params = len(list(callable_op.types.data))
         # need separate loop because not all parameters have types! (TODO: fix this workaround)
         for op_type in callable_op.types.data:
             self.print(op_type.data, end=' ', indent=False)
-            self.print(callable_op.parameters.data[i].data, end='', indent=False)
+            self.print(callable_op.header_parameters.data[i].data, end='', indent=False)
             if i < (num_params-1):
                 self.print(",", end='', indent=False)
             i = i + 1
         self.print("){")
         self.indent()
-        self.printOperation(callable_op.body.op)
+        for each_op in callable_op.body.ops:
+            self.printOperation(each_op)
         self.print("return 0;")
         self.dedent()
         self.print("}")
@@ -175,6 +176,10 @@ class CGeneration:
             self.print("[", indent=False, end="")
             self.printResult(operation.index)
             self.print("]", indent=False, end="")
+            return
+
+        if (isinstance(operation, PointerCast)):
+            self.print(operation.statement.data)
             return
 
         self.print(f"// Operation {operation.name} not supported inprinter")

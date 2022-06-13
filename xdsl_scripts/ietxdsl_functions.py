@@ -98,7 +98,7 @@ def myVisit(node, block=None, ctx={}):
     if isinstance(node, nodes.CallableBody):
 #         print(f'CallableBody: f{node.view}')
         body = [myVisit(x) for x in node.body]
-        return 
+        return
     
     if isinstance(node, nodes.Expression):
         expr = node.expr
@@ -142,6 +142,12 @@ def myVisit(node, block=None, ctx={}):
         assert len(node.children) == 1
         assert len(node.children[0]) == 1
         myVisit(node.children[0][0], block, ctx)
+        return
+
+    if isinstance(node, nodes.PointerCast):
+        statement = node.ccode
+        pointer_cast = PointerCast.get(statement)
+        block.add_ops([pointer_cast])
         return
 
     raise TypeError(f'Unsupported type of node: {type(node)}, {vars(node)}')

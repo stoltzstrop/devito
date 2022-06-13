@@ -33,14 +33,21 @@ from sympy import Indexed, IndexedBase, symbols, Integer, Symbol, Add, Mul, Eq
 # later in cgeneration those parameters without associate types aren't printed in the Kernel header
 op_params = list(op.parameters)
 op_types = []
+op_header_params = []
 for opi in op_params:
     op_types.append(opi._C_typedata)
+    op_header_params.append(opi)
 
-# TODO: for now we still need to add "t0" and "t1" even though they aren't passed in
+# TODO: u also does not get the right name or type and must be passed in this way for now
+op_header_params[0] = str(op_header_params[0]._C_symbol)
+op_types[0] = str(op_params[0]._C_typename)
+
+# TODO: we still need to add "t0" and "t1" even though they aren't passed in
 op_params.append("t0")
 op_params.append("t1")
-# TODO: u also does not get the right type and must be passed in this way for now
+# TODO: also have to fix u:
 op_params[0] = "u"
+
 
 ints = []
 for opi in op_params:
@@ -51,16 +58,20 @@ d = {name: register for name, register in zip(ints, b.args)}
     
 #body of kernel
 node = op.body.body[1].body[0].children[0][0].body[0].body[0]
-full_loop = op.body.body[1].args.get('body')[0]
 kernel = op.body
 kernel_comments = op.body.body[0]
+
+full_loop = op.body.body[1].args.get('body')[0]
+uvec_cast =op.body.args.get('casts')[0]
 #print(vars(node))
 
-result =  ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
-#result =  ietxdsl_functions.myVisit(node, block=b, ctx=d)
+uvec_result = ietxdsl_functions.myVisit(uvec_cast, block=b, ctx=d)
+
+result = ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
+#result =  ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
 
 Printer()._print_named_block(b)
-call_obj = Callable.get("kernel", ints, op_types, b)
+call_obj = Callable.get("kernel", ints, op_header_params, op_types, b)
 Printer().print_op(ModuleOp.from_region_or_ops([call_obj]))
 cgen = CGeneration()
 cgen.printCallable(call_obj)
