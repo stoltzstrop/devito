@@ -128,6 +128,10 @@ def myVisit(node, block=None, ctx={}):
             b.add_ops(r)
             b.add_ops([init])
         myVisit(node.children[0][0], b, ctx)
+        if len(node.pragmas) > 0:
+            for p in node.pragmas:
+                prag = Statement.get(p)
+                block.add_ops([prag])
         iteration = Iteration.get(node.properties, node.limits, node.index, b)
         block.add_ops([iteration])
         return
@@ -135,19 +139,48 @@ def myVisit(node, block=None, ctx={}):
     if isinstance(node, nodes.Section):
         assert len(node.children) == 1
         assert len(node.children[0]) == 1
+        # TODO: revise this to check if contents are longer than 1 and to add
+        # the first and last content!
+        if len(node.ccode.contents) > 1:
+            # TODO: may need to print multiple comments?!
+            header = Statement.get(node.ccode.contents[0])
+#            if isinstance(header,Comment(Generable)):
+            block.add_ops([header])
         myVisit(node.children[0][0], block, ctx)
+
+        if len(node.ccode.contents) > 2:
+            footer = Statement.get(node.ccode.contents[len(node.ccode.contents) - 1])
+#            if isinstance(footer,Comment(Generable)):
+            block.add_ops([footer])
         return
 
     if isinstance(node, nodes.TimedList):
         assert len(node.children) == 1
         assert len(node.children[0]) == 1
+        header = Statement.get(node.header[0])
+        block.add_ops([header])
         myVisit(node.children[0][0], block, ctx)
+        footer = Statement.get(node.footer[0])
+        block.add_ops([footer])
         return
 
     if isinstance(node, nodes.PointerCast):
+        # TODO should this throw exception if there is any body?
         statement = node.ccode
         pointer_cast = PointerCast.get(statement)
         block.add_ops([pointer_cast])
+        return
+
+    if isinstance(node, nodes.List):
+        # TODO pull out list of comments -- also check that there is no body :S
+        # (or deal with body if there is!)
+        if len(node.body) > 0:
+            body = node.body
+            body = myVisit(node.body)
+        header = node.header
+        for h in header:
+            comment = Statement.get(h)
+            block.add_ops([comment])
         return
 
     raise TypeError(f'Unsupported type of node: {type(node)}, {vars(node)}')

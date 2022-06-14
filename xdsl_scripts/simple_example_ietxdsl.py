@@ -1,5 +1,5 @@
 ### continuation of xdsl generated code pulled out from GenerateXDSL jupyter notebook
-
+import cgen as cgen
 from xdsl.dialects.builtin import *
 from xdsl.printer import Printer
 from devito.ir.ietxdsl import *
@@ -14,6 +14,18 @@ import devito.ir.iet.nodes as nodes
 from devito.types.basic import IndexedData
 
 from xdsl_scripts import ietxdsl_functions
+
+
+def createStatement(initial_string, val):
+    ret_str = initial_string
+    if isinstance(val, tuple):
+        for t in val:
+            ret_str = ret_str + " " + t
+    else:
+        ret_str = ret_str + " "+ val
+
+    return ret_str
+
 
 ctx = MLContext()
 Builtin(ctx)
@@ -55,25 +67,45 @@ for opi in op_params:
 
 b = Block.from_arg_types([iet.i32] * len(ints))
 d = {name: register for name, register in zip(ints, b.args)}
-    
-#body of kernel
+
+# body of kernel
 node = op.body.body[1].body[0].children[0][0].body[0].body[0]
 kernel = op.body
-kernel_comments = op.body.body[0]
 
-full_loop = op.body.body[1].args.get('body')[0]
+headers = op._headers
+includes = op._includes
+struct_decs = [i._C_typedecl for i in op.parameters if i._C_typedecl is not None]
+test : cgen.Struct = struct_decs[0]
+kernel_comments = op.body.body[0]
 uvec_cast =op.body.args.get('casts')[0]
+full_loop = op.body.body[1].args.get('body')[0]
 #print(vars(node))
 
-uvec_result = ietxdsl_functions.myVisit(uvec_cast, block=b, ctx=d)
+#header_result = ietxdsl_functions.myVisit(nodes.Element(cgen.Statement(('#define',)+headers[0])), block=headers_b, ctx=headers_d)
+#include_result = ietxdsl_functions.myVisit(includes, block=b, ctx=d)
 
-result = ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
-#result =  ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
+comment_result = ietxdsl_functions.myVisit(kernel_comments, block=b, ctx=d)
+uvec_result = ietxdsl_functions.myVisit(uvec_cast, block=b, ctx=d)
+main_result = ietxdsl_functions.myVisit(full_loop, block=b, ctx=d)
 
 Printer()._print_named_block(b)
 call_obj = Callable.get("kernel", ints, op_header_params, op_types, b)
 Printer().print_op(ModuleOp.from_region_or_ops([call_obj]))
 cgen = CGeneration()
+
+
+# TODO: is there a more formal way to do this?
+# print headers:
+for header in headers:
+    cgen.printOperation(Statement.get(createStatement("#define",header)))
+# print includes:
+for include in includes:
+    cgen.printOperation(Statement.get(createStatement("#include",include)))
+# print structs:
+for struct in struct_decs:
+    cgen.printOperation(StructDecl.get(struct.tpname, struct.fields, struct.declname, struct.pad_bytes))
+
+# print Kernel
 cgen.printCallable(call_obj)
 
 print(cgen.str())

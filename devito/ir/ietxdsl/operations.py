@@ -20,6 +20,9 @@ class IET:
         self.ctx.register_op(Idx)
         self.ctx.register_op(Assign)
         self.ctx.register_op(Initialise)
+        self.ctx.register_op(PointerCast)
+        self.ctx.register_op(Statement)
+        self.ctx.register_op(StructDecl)
         self.i32 = IntegerType.from_width(32)
 
 
@@ -107,6 +110,33 @@ class PointerCast(Operation):
     def get(statement):
         return PointerCast.build(operands=[],attributes= {"statement" : StringAttr.from_str(statement)},
                                result_types=[])
+
+@irdl_op_definition
+class Statement(Operation):
+    name: str = "iet.comment"
+    statement = AttributeDef(StringAttr)
+
+    @staticmethod
+    def get(statement):
+        return Statement.build(operands=[], attributes= {"statement" : StringAttr.from_str(statement)},
+                               result_types=[])
+
+@irdl_op_definition
+class StructDecl(Operation):
+    name: str = "iet.structdecl"
+    id = AttributeDef(StringAttr)
+    fields = AttributeDef(ArrayAttr)
+    declname = AttributeDef(StringAttr)
+    padbytes = AttributeDef(AnyAttr())
+
+    # TODO: how to implement padbytes??
+    @staticmethod
+    def get(name: str, fields: List[str], declname: str, padbytes: int=0):
+        padb = IntegerAttr.from_int_and_width(padbytes, 32)
+        return StructDecl.build(operands=[], attributes= {"id" : StringAttr.from_str(name),
+                                "fields": ArrayAttr.from_list([StringAttr.from_str(f) for f in fields]),
+                                "declname" : StringAttr.from_str(declname), "padbytes": padb},
+                                result_types=[])
 
 @irdl_op_definition
 class Initialise(Operation):

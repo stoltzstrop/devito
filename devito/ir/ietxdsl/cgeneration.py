@@ -182,4 +182,17 @@ class CGeneration:
             self.print(operation.statement.data)
             return
 
+        if (isinstance(operation, Statement)):
+            self.print(operation.statement.data)
+            return
+
+        if (isinstance(operation, StructDecl)):
+            self.print("struct", indent=False, end=" ")
+            self.print(operation.id.data)
+            self.print("{")
+            for field in operation.fields.data:
+                self.print(field.data)
+            self.print("};")
+            return
+
         self.print(f"// Operation {operation.name} not supported inprinter")
