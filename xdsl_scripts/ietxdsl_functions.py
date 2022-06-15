@@ -1,23 +1,15 @@
 ### definitions pulled out from GenerateXDSL jupyter notebook
+from cgen import Generable
 
-from xdsl.dialects.builtin import *
-from xdsl.printer import Printer
 from devito.ir.ietxdsl import *
-from xdsl.dialects.builtin import ModuleOp
-from  devito.ir.ietxdsl.operations import Callable
-from devito import Grid, TimeFunction, Eq, Operator
-
-from devito.ir.iet.visitors import Visitor
-
+from devito import Grid, TimeFunction, Eq, Operator, ModuloDimension
 import devito.ir.iet.nodes as nodes
-
 from devito.types.basic import IndexedData
-from sympy import Indexed, IndexedBase, symbols, Integer, Symbol, Add, Mul, Eq, Mod
+from sympy import Indexed, Integer, Symbol, Add, Eq, Mod
 
 ctx = MLContext()
 Builtin(ctx)
 iet = IET(ctx)
-
 
 def add_to_block(expr, arg_by_expr, result):
     if expr in arg_by_expr:
@@ -96,7 +88,6 @@ def myVisit(node, block=None, ctx={}):
         return
     
     if isinstance(node, nodes.CallableBody):
-#         print(f'CallableBody: f{node.view}')
         body = [myVisit(x) for x in node.body]
         return
     
@@ -119,14 +110,14 @@ def myVisit(node, block=None, ctx={}):
         index = node.index
         b = Block.from_arg_types([iet.i32])
         ctx = {**ctx, index: b.args[0]}
-#       TODO: assert(uindices are not empty and are modulo)
         for uindex in list(node.uindices):
-            r = []
-            add_to_block(uindex.symbolic_min,{Symbol(s): a for s, a in ctx.items()}, r)
-            tmp = uindex.name
-            init = Initialise.get(r[-1].results[0],[iet.i32],uindex.name)
-            b.add_ops(r)
-            b.add_ops([init])
+            if isinstance(uindex,ModuloDimension):
+                r = []
+                add_to_block(uindex.symbolic_min,{Symbol(s): a for s, a in ctx.items()}, r)
+                tmp = uindex.name
+                init = Initialise.get(r[-1].results[0],[iet.i32],uindex.name)
+                b.add_ops(r)
+                b.add_ops([init])
         myVisit(node.children[0][0], b, ctx)
         if len(node.pragmas) > 0:
             for p in node.pragmas:
@@ -139,19 +130,13 @@ def myVisit(node, block=None, ctx={}):
     if isinstance(node, nodes.Section):
         assert len(node.children) == 1
         assert len(node.children[0]) == 1
-        # TODO: revise this to check if contents are longer than 1 and to add
-        # the first and last content!
-        if len(node.ccode.contents) > 1:
-            # TODO: may need to print multiple comments?!
-            header = Statement.get(node.ccode.contents[0])
-#            if isinstance(header,Comment(Generable)):
-            block.add_ops([header])
-        myVisit(node.children[0][0], block, ctx)
-
-        if len(node.ccode.contents) > 2:
-            footer = Statement.get(node.ccode.contents[len(node.ccode.contents) - 1])
-#            if isinstance(footer,Comment(Generable)):
-            block.add_ops([footer])
+        # TODO: there doesn't seem to be a straightforward way of pulling out the necessary parts of a Section..
+        for content in node.ccode.contents:
+            if isinstance(content,Generable):
+                comment = Statement.get(content)
+                block.add_ops([comment])
+            elif isinstance(content,node.Collection):
+                myVisit(node.children[0][0], block, ctx)
         return
 
     if isinstance(node, nodes.TimedList):
@@ -165,20 +150,20 @@ def myVisit(node, block=None, ctx={}):
         return
 
     if isinstance(node, nodes.PointerCast):
-        # TODO should this throw exception if there is any body?
         statement = node.ccode
         pointer_cast = PointerCast.get(statement)
         block.add_ops([pointer_cast])
         return
 
     if isinstance(node, nodes.List):
-        # TODO pull out list of comments -- also check that there is no body :S
-        # (or deal with body if there is!)
-        if len(node.body) > 0:
-            body = node.body
-            body = myVisit(node.body)
         header = node.header
         for h in header:
+            comment = Statement.get(h)
+            block.add_ops([comment])
+        if len(node.body) > 0:
+            body = myVisit(node.body)
+        footer = node.footer
+        for h in footer:
             comment = Statement.get(h)
             block.add_ops([comment])
         return

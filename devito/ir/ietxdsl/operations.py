@@ -3,9 +3,6 @@ from xdsl.irdl import *
 from xdsl.util import *
 from xdsl.dialects.builtin import *
 
-from devito.types.dimension import DerivedDimension
-
-
 @dataclass
 class IET:
     ctx: MLContext
@@ -45,7 +42,6 @@ class Constant(Operation):
                              result_types=[IntegerType.from_width(32)])
         return res
 
-
 @irdl_op_definition
 class Addi(Operation):
     name: str = "iet.addi"
@@ -71,7 +67,6 @@ class Modi(Operation):
     input2 = OperandDef(IntegerType)
     output = ResultDef(IntegerType)
 
-    # TODO replace with trait
     def verify_(self) -> None:
         if self.input1.typ != self.input2.typ or self.input2.typ != self.output.typ:
             raise Exception("expect all input and output types to be equal")
@@ -93,7 +88,6 @@ class Idx(Operation):
     def get(array, index):
         return Idx.build(operands=[array, index],
                          result_types=[IntegerType.build(32)])
-
 
 @irdl_op_definition
 class Assign(Operation):
@@ -129,7 +123,6 @@ class StructDecl(Operation):
     declname = AttributeDef(StringAttr)
     padbytes = AttributeDef(AnyAttr())
 
-    # TODO: how to implement padbytes??
     @staticmethod
     def get(name: str, fields: List[str], declname: str, padbytes: int=0):
         padb = IntegerAttr.from_int_and_width(padbytes, 32)
@@ -144,7 +137,6 @@ class Initialise(Operation):
     id = AttributeDef(StringAttr)
     rhs = OperandDef(IntegerType)
     lhs = ResultDef(IntegerType)
-
 
     @staticmethod
     def get(lhs, rhs, id):
@@ -173,7 +165,6 @@ class Callable(Operation):
             "types":
             ArrayAttr.from_list([StringAttr.from_str(p) for p in types])
         }, regions=[Region.from_block_list([body])])
-
 
 @irdl_op_definition
 class Iteration(Operation):

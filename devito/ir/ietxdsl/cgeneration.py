@@ -54,7 +54,6 @@ class CGeneration:
     def printCallable(self, callable_op: Callable):
         arglist = callable_op.body.blocks[0].args
         i = 0
-        # TODO: somehow know to leave out "t0" and "t1"
         self.print("int Kernel(", end='', indent=False)
         for arg in arglist:
             name = callable_op.parameters.data[0].data
@@ -62,7 +61,8 @@ class CGeneration:
             i = i + 1
         i = 0
         num_params = len(list(callable_op.types.data))
-        # need separate loop because not all parameters have types! (TODO: fix this workaround)
+        # TODO: fix this workaround
+        # need separate loop because only header parameters have types
         for op_type in callable_op.types.data:
             self.print(op_type.data, end=' ', indent=False)
             self.print(callable_op.header_parameters.data[i].data, end='', indent=False)
@@ -84,7 +84,6 @@ class CGeneration:
         SSAValueNames[ssa_val] = iterator
         self.iterator_names[
             iteration_op.regions[0].blocks[0].args[0]] = iterator
-
         lower_bound = iteration_op.limits.data[0].data
         upper_bound = iteration_op.limits.data[1].data
         increment = iteration_op.limits.data[2].data
@@ -104,7 +103,6 @@ class CGeneration:
             self.print(name, indent=False, end="")
             return
         if isinstance(result, SSAValue):
-           # name = SSAValueNames[result.op]
             self.printOperation(result.op)
 
     def printOperation(self, operation):
@@ -132,13 +130,13 @@ class CGeneration:
             return
 
         if (isinstance(operation, Modi)):
-            self.print("(", end="")
+            self.print("(", end="", indent=False)
             self.printResult(operation.input1)
-            self.print(")", end="")
+            self.print(")", end="", indent=False)
             self.print(" % ", end='', indent=False)
-            self.print("(", end="")
+            self.print("(", end="", indent=False)
             self.printResult(operation.input2)
-            self.print(")", end="")
+            self.print(")", end="", indent=False)
             return
 
         if (isinstance(operation, Callable)):
