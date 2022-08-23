@@ -1,0 +1,16 @@
+grid = Grid(shape = (3, 3))
+u = TimeFunction(name='u', grid=grid)
+eq = Eq(u.forward, u.dx)
+op = Operator([eq])
+
+grid = Grid(shape = (3, 3))
+u = TimeFunction(name='u', grid=grid, time_order=2)
+eq = Eq(u.forward, u.dt2)
+op = Operator([eq])
+
+grid = Grid(shape = (3, 3))
+u = TimeFunction(name='u', grid=grid, time_order=2)
+v = TimeFunction(name='v', grid=grid, time_order=2)
+eq0 = Eq(u.forward, u.dt2)
+eq1 = Eq(v.forward, u.dt2)
+op = Operator([eq0, eq1])
